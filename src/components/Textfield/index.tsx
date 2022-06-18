@@ -1,27 +1,27 @@
-import React from "react";
+import React from "react"
 
-interface ITextfieldProps {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  autoFocus?: boolean;
-  className?: string;
-  testId?: string;
+type ITextfieldProps = React.DetailedHTMLProps<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  HTMLInputElement
+> & {
+  testId?: string
 }
 
-export const Textfield = (props: ITextfieldProps) => {
-  const { value, onChange, placeholder, autoFocus, className, testId } = props;
+const className =
+  "dark:bg-gray-900 border border-gray-300 dark:border-gray-600 px-3 py-1 text-lg rounded-lg"
 
-  return (
-    <input
-      className={`dark:bg-gray-900 border border-gray-300 dark:border-gray-600 px-3 py-1 w-80 rounded-lg ${className}`}
-      value={value}
-      onChange={(event) => {
-        onChange(event.target.value);
-      }}
-      placeholder={placeholder}
-      data-testid={testId}
-      autoFocus={autoFocus}
-    />
-  );
-};
+export const Textfield = React.forwardRef<HTMLInputElement, ITextfieldProps>(
+  (props, ref) => {
+    const { testId, ...rest } = props
+
+    return (
+      <input
+        type="text"
+        {...rest}
+        ref={ref}
+        className={`${props.className ?? ""} ${className}`}
+        data-testid={testId}
+      />
+    )
+  }
+)

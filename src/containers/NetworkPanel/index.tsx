@@ -1,52 +1,85 @@
-import React, { useState, useEffect } from "react";
-import { SplitPaneLayout } from "../../components/Layout";
-import { NetworkTable } from "./NetworkTable";
-import { NetworkDetails } from "./NetworkDetails";
-import { Toolbar } from "../Toolbar";
-import { NetworkRequest } from "../../hooks/useNetworkMonitor";
-import { onNavigate } from "../../services/networkMonitor";
+import { useState, useEffect } from "react"
+import RegexParser from "regex-parser"
+import { SplitPaneLayout } from "../../components/Layout"
+import { NetworkTable } from "./NetworkTable"
+import { NetworkDetails } from "./NetworkDetails"
+import { Toolbar } from "../Toolbar"
+import { NetworkRequest } from "../../hooks/useNetworkMonitor"
+import { onNavigate } from "../../services/networkMonitor"
 
 interface NetworkPanelProps {
-  selectedRowId: string | number | null;
-  setSelectedRowId: (selectedRowId: string | number | null) => void;
-  networkRequests: NetworkRequest[];
-  clearWebRequests: () => void;
+  selectedRowId: string | number | null
+  setSelectedRowId: (selectedRowId: string | number | null) => void
+  networkRequests: NetworkRequest[]
+  clearWebRequests: () => void
+}
+
+const getRegex = (str: string) => {
+  try {
+    const regex = RegexParser(str)
+    return { regex, errorMessage: null }
+  } catch (error) {
+    let message = "Invalid Regex"
+    if (error instanceof Error) message = error.message
+    return { regex: null, errorMessage: message }
+  }
 }
 
 const filterNetworkRequests = (
   networkRequests: NetworkRequest[],
-  filterValue: string
-) => {
-  if (!filterValue) {
-    return networkRequests;
+  filterValue: string,
+  options: {
+    isInverted: boolean
+    isRegex: boolean
   }
-  return networkRequests.filter((networkRequest) => {
-    const { operationName } = networkRequest.request.primaryOperation;
-    return operationName.toLowerCase().includes(filterValue.toLowerCase());
-  });
-};
+): { results: NetworkRequest[]; errorMessage?: string } => {
+  if (!filterValue?.trim()?.length) {
+    return { results: networkRequests }
+  }
+
+  const regexResult = options.isRegex ? getRegex(filterValue) : null
+  if (regexResult?.errorMessage) {
+    return { results: [], errorMessage: regexResult.errorMessage }
+  }
+
+  const results = networkRequests.filter((networkRequest) => {
+    const { operationName = "" } = networkRequest.request.primaryOperation
+    const isMatch = options.isRegex
+      ? operationName.match(regexResult?.regex as RegExp)
+      : operationName.toLowerCase().includes(filterValue.toLowerCase())
+
+    return options.isInverted ? !isMatch : isMatch
+  })
+
+  return { results }
+}
 
 export const NetworkPanel = (props: NetworkPanelProps) => {
   const { networkRequests, clearWebRequests, selectedRowId, setSelectedRowId } =
-    props;
+    props
 
-  const [filterValue, setFilterValue] = useState("");
-  const [isPreserveLogs, setIsPreserveLogs] = useState(false);
-  const filteredNetworkRequests = filterNetworkRequests(
-    networkRequests,
-    filterValue
-  );
+  const [filterValue, setFilterValue] = useState("")
+  const [isPreserveLogs, setIsPreserveLogs] = useState(false)
+  const [isInverted, setIsInverted] = useState(false)
+  const [isRegexActive, onIsRegexActiveChange] = useState(false)
+
+  const { results: filterResults, errorMessage: filterError } =
+    filterNetworkRequests(networkRequests, filterValue, {
+      isInverted,
+      isRegex: isRegexActive,
+    })
+
   const selectedRequest = networkRequests.find(
     (request) => request.id === selectedRowId
-  );
+  )
 
   useEffect(() => {
     return onNavigate(() => {
       if (!isPreserveLogs) {
-        clearWebRequests();
+        clearWebRequests()
       }
-    });
-  }, [isPreserveLogs, clearWebRequests]);
+    })
+  }, [isPreserveLogs, clearWebRequests])
 
   return (
     <SplitPaneLayout
@@ -56,19 +89,24 @@ export const NetworkPanel = (props: NetworkPanelProps) => {
           onFilterValueChange={setFilterValue}
           preserveLogs={isPreserveLogs}
           onPreserveLogsChange={setIsPreserveLogs}
+          inverted={isInverted}
+          onInvertedChange={setIsInverted}
+          regexActive={isRegexActive}
+          onRegexActiveChange={onIsRegexActiveChange}
+          onClear={() => {
+            setSelectedRowId(null)
+            clearWebRequests()
+          }}
         />
       }
       leftPane={
         <NetworkTable
-          data={filteredNetworkRequests}
+          data={filterResults}
+          error={filterError}
           selectedRowId={selectedRowId}
           onRowClick={setSelectedRowId}
           onRowSelect={setSelectedRowId}
           showSingleColumn={Boolean(selectedRequest)}
-          onClear={() => {
-            setSelectedRowId(null);
-            clearWebRequests();
-          }}
         />
       }
       rightPane={
@@ -80,12 +118,12 @@ export const NetworkPanel = (props: NetworkPanelProps) => {
             <NetworkDetails
               data={selectedRequest}
               onClose={() => {
-                setSelectedRowId(null);
+                setSelectedRowId(null)
               }}
             />
           </div>
         )
       }
     />
-  );
-};
+  )
+}

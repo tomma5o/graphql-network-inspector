@@ -1,40 +1,73 @@
-import React from "react";
-import { Panels, PanelSection } from "./PanelSection";
-import { CodeBlock } from "../../../components/CodeBlock";
-import { CopyButton } from "../../../components/CopyButton";
-import * as safeJson from "../../../helpers/safeJson";
+import { AutoFormatToggleButton } from "@/components/AutoFormatToggleButton"
+import { CodeView } from "@/components/CodeView"
+import { CopyButton } from "@/components/CopyButton"
+import { IGraphqlRequestBody } from "@/helpers/graphqlHelpers"
+import * as safeJson from "@/helpers/safeJson"
+import { useToggle } from "@/hooks/useToggle"
+import { Bar } from "../../../components/Bar"
+import { Panels, PanelSection } from "./PanelSection"
 
 interface IRequestViewProps {
-  requests: {
-    query: string;
-    variables: object;
-  }[];
+  autoFormat: boolean
+  requests: IGraphqlRequestBody[]
+}
+
+interface IRequestViewFooterProps {
+  autoFormat: boolean
+  toggleAutoFormat: React.DispatchWithoutAction
+}
+
+const isVariablesPopulated = (request: IGraphqlRequestBody) => {
+  return Object.keys(request.variables || {}).length > 0
 }
 
 export const RequestView = (props: IRequestViewProps) => {
-  const { requests } = props;
+  const { requests, autoFormat } = props
 
   return (
     <Panels>
-      {requests.map((request, i) => {
+      {requests.map((request) => {
         return (
           <PanelSection key={request.query} className="relative">
-            <CopyButton
-              textToCopy={request.query}
-              className="absolute right-6 top-6 z-10"
+            <div className="flex flex-col items-end gap-2 absolute right-3 top-3 z-10 transition-opacity opacity-50 hover:opacity-100">
+              <CopyButton label="Copy Query" textToCopy={request.query} />
+              {isVariablesPopulated(request) && (
+                <CopyButton
+                  label="Copy Vars"
+                  textToCopy={safeJson.stringify(
+                    request.variables,
+                    undefined,
+                    2
+                  )}
+                />
+              )}
+            </div>
+            <CodeView
+              text={request.query}
+              language={"graphql"}
+              autoFormat={autoFormat}
             />
-            <CodeBlock text={request.query} language={"graphql"} />
-            {Boolean(Object.keys(request.variables).length) && (
+            {isVariablesPopulated(request) && (
               <div className="bg-gray-200 dark:bg-gray-800 rounded-lg">
-                <CodeBlock
+                <CodeView
                   text={safeJson.stringify(request.variables, undefined, 2)}
                   language={"json"}
                 />
               </div>
             )}
           </PanelSection>
-        );
+        )
       })}
     </Panels>
-  );
-};
+  )
+}
+
+export const RequestViewFooter = (props: IRequestViewFooterProps) => {
+  const { autoFormat, toggleAutoFormat } = props
+
+  return (
+    <Bar className="mt-auto absolute border-t">
+      <AutoFormatToggleButton active={autoFormat} onToggle={toggleAutoFormat} />
+    </Bar>
+  )
+}

@@ -1,14 +1,16 @@
-import React from "react";
-import { Header } from "../../../../hooks/useNetworkMonitor";
+import { useMarkSearch } from "@/hooks/useMark"
+import { Header } from "@/hooks/useNetworkMonitor"
 
 interface IHeadersProps {
-  headers: Header[];
+  headers: Header[]
 }
 
 export const HeaderList = (props: IHeadersProps) => {
-  const { headers } = props;
+  const { headers } = props
+  const ref = useMarkSearch()
+
   return (
-    <ul className="list-none m-0">
+    <ul className="list-none m-0" ref={ref}>
       {headers.map((header) => (
         <li
           key={`${header.name}:${header.value}`}
@@ -19,5 +21,5 @@ export const HeaderList = (props: IHeadersProps) => {
         </li>
       ))}
     </ul>
-  );
-};
+  )
+}

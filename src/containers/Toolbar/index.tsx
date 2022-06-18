@@ -1,15 +1,24 @@
-import React from "react";
-import { Checkbox } from "../../components/Checkbox";
-import { IconButton } from "../../components/IconButton";
-import { SearchIcon } from "../../components/Icons/SearchIcon";
-import { Textfield } from "../../components/Textfield";
-import { useSearch } from "../../hooks/useSearch";
+import { Checkbox } from "../../components/Checkbox"
+import { Button } from "../../components/Button"
+import { BinIcon } from "../../components/Icons/BinIcon"
+import { SearchIcon } from "../../components/Icons/SearchIcon"
+import { useSearch } from "../../hooks/useSearch"
+import { Textfield } from "@/components/Textfield"
+import { InterceptButton } from "../../components/InterceptPopover"
+import { OverflowPopover } from "../../components/OverflowPopover"
+import { useOperatingSystem } from "../../hooks/useOperatingSystem"
+import { Bar } from "../../components/Bar"
 
 interface IToolbarProps {
-  filterValue: string;
-  onFilterValueChange: (filterValue: string) => void;
-  preserveLogs: boolean;
-  onPreserveLogsChange: (preserveLogs: boolean) => void;
+  filterValue: string
+  onFilterValueChange: (filterValue: string) => void
+  preserveLogs: boolean
+  onPreserveLogsChange: (preserveLogs: boolean) => void
+  inverted: boolean
+  onInvertedChange: (inverted: boolean) => void
+  regexActive: boolean
+  onRegexActiveChange: (regexActive: boolean) => void
+  onClear: () => void
 }
 
 export const Toolbar = (props: IToolbarProps) => {
@@ -18,31 +27,65 @@ export const Toolbar = (props: IToolbarProps) => {
     onFilterValueChange,
     preserveLogs,
     onPreserveLogsChange,
-  } = props;
-  const { setIsSearchOpen } = useSearch();
+    inverted,
+    onInvertedChange,
+    regexActive,
+    onRegexActiveChange,
+    onClear,
+  } = props
+  const { setIsSearchOpen } = useSearch()
+  const os = useOperatingSystem()
+  const isMac = os === "mac"
 
   return (
-    <div className="flex w-full p-2 border-b dark:bg-gray-800 border-gray-300 dark:border-gray-600 space-x-6">
+    <Bar testId="toolbar" className="border-b">
+      <Button
+        icon={<BinIcon />}
+        onClick={onClear}
+        testId="clear-network-table"
+        className="-mr-3"
+      />
       <Textfield
+        className="w-80"
         value={filterValue}
-        onChange={onFilterValueChange}
-        placeholder="Filter"
+        onChange={(event) => onFilterValueChange(event.currentTarget.value)}
+        placeholder={regexActive ? "/ab+c/" : "Filter"}
         testId="filter-input"
       />
-      <Checkbox
-        id="preserveLog"
-        label="Preserve Log"
-        checked={preserveLogs}
-        onChange={onPreserveLogsChange}
-        testId="preserve-log-checkbox"
+      <OverflowPopover
+        className="flex-1 space-x-6"
+        items={[
+          <Checkbox
+            id="invert"
+            label="Invert"
+            checked={inverted}
+            onChange={onInvertedChange}
+            testId="inverted-checkbox"
+          />,
+          <Checkbox
+            id="regex"
+            label="Regex"
+            checked={regexActive}
+            onChange={onRegexActiveChange}
+            testId="regex-checkbox"
+          />,
+          <Checkbox
+            id="preserveLog"
+            label="Preserve Log"
+            checked={preserveLogs}
+            onChange={onPreserveLogsChange}
+            testId="preserve-log-checkbox"
+          />,
+          <Button
+            icon={<SearchIcon />}
+            onClick={() => setIsSearchOpen(true)}
+            testId="search-button"
+          >
+            Search
+          </Button>,
+          ...(isMac ? [<InterceptButton />] : []),
+        ]}
       />
-      <IconButton
-        icon={<SearchIcon />}
-        onClick={() => setIsSearchOpen(true)}
-        testId="search-button"
-      >
-        Search
-      </IconButton>
-    </div>
-  );
-};
+    </Bar>
+  )
+}
